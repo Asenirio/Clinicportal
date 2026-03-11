@@ -38,6 +38,16 @@ try {
     ");
     $low_stock_items = $low_stock_stmt->fetchAll();
 
+    // Doctors List for Dashboard Widget
+    $dashboard_doctors_stmt = $pdo->query("
+        SELECT d.id, u.full_name, s.name as specialty_name, d.availability, u.avatar 
+        FROM doctors d 
+        JOIN users u ON d.user_id = u.id 
+        LEFT JOIN specialties s ON d.specialty_id = s.id
+        ORDER BY d.id DESC LIMIT 4
+    ");
+    $dashboard_doctors = $dashboard_doctors_stmt->fetchAll();
+
 } catch (PDOException $e) {
     echo "Error: " . $e->getMessage();
 }
@@ -71,20 +81,54 @@ try {
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Main Chart -->
+        <!-- List of Doctors Widget -->
         <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <div class="flex items-center justify-between mb-8">
                 <div>
-                    <h3 class="text-lg font-bold text-gray-800">Weekly Wellness Activity</h3>
-                    <p class="text-sm text-gray-500">Patient attendance overview</p>
+                    <h3 class="text-lg font-bold text-gray-800">Medical Staff Overview</h3>
+                    <p class="text-sm text-gray-500">Available specialists and doctors</p>
                 </div>
-                <select class="bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 outline-none">
-                    <option>Last 7 Days</option>
-                    <option>Last 30 Days</option>
-                </select>
+                <a href="doctors.php" class="text-sm font-bold text-blue-600 hover:text-blue-700 hover:underline">
+                    View All Staff
+                </a>
             </div>
-            <div class="h-[300px]">
-                <canvas id="mainDashboardChart"></canvas>
+            
+            <div class="space-y-4">
+                <?php if (empty($dashboard_doctors)): ?>
+                    <div class="p-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                        <i class="fa-solid fa-user-doctor text-4xl text-gray-300 mb-3"></i>
+                        <p class="text-gray-500 font-medium">No doctors registered in the system.</p>
+                        <a href="add_doctor.php" class="text-blue-600 font-bold hover:underline text-sm mt-2 inline-block">Add First Doctor</a>
+                    </div>
+                <?php else: ?>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <?php foreach ($dashboard_doctors as $dd): ?>
+                            <div class="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-blue-100 hover:shadow-md hover:bg-blue-50/10 transition-all bg-white">
+                                <div class="w-12 h-12 bg-slate-100 rounded-xl overflow-hidden shadow-sm flex-shrink-0">
+                                    <img src="<?php echo htmlspecialchars($dd['avatar'] ?? 'img/default-avatar.png'); ?>" 
+                                         alt="Avatar" class="w-full h-full object-cover">
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="font-bold text-gray-800 text-sm truncate">
+                                        <?php echo htmlspecialchars($dd['full_name']); ?>
+                                    </h4>
+                                    <p class="text-[11px] text-blue-600 font-bold uppercase tracking-wider truncate mb-1">
+                                        <?php echo htmlspecialchars($dd['specialty_name'] ?? 'General Practice'); ?>
+                                    </p>
+                                    <div class="flex items-center gap-1.5">
+                                        <div class="w-1.5 h-1.5 rounded-full <?php echo ($dd['availability'] === 'Available') ? 'bg-green-500 animate-pulse' : 'bg-gray-400'; ?>"></div>
+                                        <span class="text-[10px] font-bold <?php echo ($dd['availability'] === 'Available') ? 'text-green-600' : 'text-gray-500'; ?> uppercase">
+                                            <?php echo htmlspecialchars($dd['availability']); ?>
+                                        </span>
+                                    </div>
+                                </div>
+                                <a href="doctors.php?id=<?php echo $dd['id']; ?>" class="w-8 h-8 rounded-lg bg-gray-50 text-gray-400 flex items-center justify-center hover:bg-blue-100 hover:text-blue-600 transition-colors flex-shrink-0">
+                                    <i class="fa-solid fa-angle-right"></i>
+                                </a>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -164,50 +208,6 @@ try {
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const rootStyles = getComputedStyle(document.documentElement);
-        const getPrimary = () => rootStyles.getPropertyValue('--brand-primary').trim();
-        const getSecondary = () => rootStyles.getPropertyValue('--brand-secondary').trim();
-
-        const ctx = document.getElementById('mainDashboardChart').getContext('2d');
-        const chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                datasets: [{
-                    label: 'New Patients',
-                    data: [45, 52, 38, 65, 48, 25, 30],
-                    borderColor: getPrimary(),
-                    borderWidth: 4,
-                    pointBackgroundColor: '#ffffff',
-                    pointBorderColor: getPrimary(),
-                    pointBorderWidth: 2,
-                    pointRadius: 6,
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    fill: true,
-                    tension: 0.4
-                }, {
-                    label: 'Appointments',
-                    data: [30, 48, 42, 55, 35, 20, 22],
-                    borderColor: getSecondary(),
-                    borderWidth: 4,
-                    pointBackgroundColor: '#ffffff',
-                    pointBorderColor: getSecondary(),
-                    pointBorderWidth: 2,
-                    pointRadius: 6,
-                    backgroundColor: 'transparent',
-                    fill: false,
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { grid: { borderDash: [5, 5], color: '#f1f5f9' }, ticks: { font: { weight: 'bold' }, color: '#94a3b8' } },
-                    x: { grid: { display: false }, ticks: { font: { weight: 'bold' }, color: '#94a3b8' } }
-                }
-            }
-        });
 
         // Polling for stats
         async function pollStats() {

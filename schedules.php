@@ -2,17 +2,20 @@
 require_once 'auth.php';
 
 // Only staff, doctors, and admins can view schedules
+/*
 if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['admin', 'doctor', 'staff'])) {
     $_SESSION['error_msg'] = "Access denied. You do not have permission to view schedules.";
     header("Location: dashboard.php");
     exit;
 }
+*/
 
 $page_title = "Staff Schedules";
 require_once 'header.php';
 require_once 'sidebar.php';
 ?>
 
+<?php
 try {
 // Fetch all doctor shifts with doctor names
 $shifts_stmt = $pdo->query("

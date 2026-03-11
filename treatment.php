@@ -54,11 +54,135 @@ require_once 'sidebar.php';
                     </div>
                 </div>
                 <button
+                    onclick="openAssignModal('<?php echo addslashes($t['name']); ?>')"
                     class="w-full mt-6 py-3 border border-gray-100 rounded-xl text-xs font-bold text-gray-500 group-hover:bg-gray-50 group-hover:text-gray-800 transition-all uppercase tracking-widest">Assign
                     to Patient</button>
             </div>
         <?php endforeach; ?>
     </div>
 </div>
+
+<!-- Assign Treatment Modal -->
+<div id="assign-treatment-modal" class="fixed inset-0 bg-black/50 z-[100] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden transform transition-all p-8">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold text-gray-800">Assign Treatment</h3>
+            <button onclick="closeAssignModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+        <form id="assign-treatment-form" class="space-y-5">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Patient <span class="text-red-500">*</span></label>
+                <select name="patient_id" id="patient-select" required
+                    class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all text-sm appearance-none cursor-pointer">
+                    <option value="">Loading patients...</option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Treatment Protocol <span class="text-red-500">*</span></label>
+                <select name="treatment_name" id="treatment-select" required
+                    class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all text-sm appearance-none cursor-pointer">
+                    <option value="">-- Select Protocol --</option>
+                    <?php foreach ($treatments as $t): ?>
+                        <option value="<?php echo htmlspecialchars($t['name']); ?>"><?php echo htmlspecialchars($t['name']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Notes</label>
+                <textarea name="notes" rows="3"
+                    class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all text-sm resize-none"
+                    placeholder="Specific instructions for this patient..."></textarea>
+            </div>
+
+            <input type="hidden" name="action" value="assign">
+            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+
+            <button type="submit" id="submit-assignment"
+                class="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all flex justify-center items-center gap-2">
+                <i class="fa-solid fa-check"></i>
+                Confirm Assignment
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const assignModal = document.getElementById('assign-treatment-modal');
+    const patientSelect = document.getElementById('patient-select');
+    const treatmentSelect = document.getElementById('treatment-select');
+    let patientsLoaded = false;
+
+    async function loadPatients() {
+        if (patientsLoaded) return;
+        try {
+            const res = await fetch('get_patients_data.php');
+            const data = await res.json();
+            if (data.success) {
+                patientSelect.innerHTML = '<option value="">-- Select Patient --</option>' + 
+                    data.patients.map(p => `<option value="${p.id}">${p.full_name} (ID: PT-${String(p.id).padStart(3, '0')})</option>`).join('');
+                patientsLoaded = true;
+            } else {
+                patientSelect.innerHTML = '<option value="">No patients found</option>';
+            }
+        } catch (e) {
+            console.error('Failed to load patients', e);
+            patientSelect.innerHTML = '<option value="">Error loading patients</option>';
+        }
+    }
+
+    function openAssignModal(treatmentName = '') {
+        assignModal.classList.remove('hidden');
+        if (treatmentName) {
+            treatmentSelect.value = treatmentName;
+        }
+        loadPatients();
+    }
+
+    function closeAssignModal() {
+        assignModal.classList.add('hidden');
+        document.getElementById('assign-treatment-form').reset();
+    }
+    
+    // Also hook the Create New Plan button to open modal
+    document.querySelector('button.bg-emerald-600').addEventListener('click', () => openAssignModal());
+
+    document.getElementById('assign-treatment-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submit-assignment');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Processing...';
+        btn.disabled = true;
+
+        try {
+            const fd = new FormData(e.target);
+            const res = await fetch('assign_treatment_handler.php', { method: 'POST', body: fd });
+            const data = await res.json();
+            
+            if (data.success) {
+                if (typeof showToast === 'function') showToast(data.message);
+                else alert(data.message);
+                closeAssignModal();
+            } else {
+                if (typeof showToast === 'function') showToast(data.message, 'error');
+                else alert('Error: ' + data.message);
+            }
+        } catch (err) {
+            if (typeof showToast === 'function') showToast('Assignment failed', 'error');
+            else alert('Assignment failed');
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    });
+
+    // Close on background click
+    assignModal.addEventListener('click', (e) => {
+        if (e.target === assignModal) closeAssignModal();
+    });
+</script>
 
 <?php require_once 'footer.php'; ?>

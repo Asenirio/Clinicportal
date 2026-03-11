@@ -124,6 +124,18 @@
             <script>setTimeout(() => document.getElementById('toast-success')?.remove(), 5000);</script>
         <?php endif; ?>
 
+        <?php if (isset($_SESSION['error_msg'])): ?>
+            <div id="toast-error"
+                class="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2">
+                <i class="fa-solid fa-circle-xmark"></i>
+                <span>
+                    <?php echo $_SESSION['error_msg'];
+                    unset($_SESSION['error_msg']); ?>
+                </span>
+            </div>
+            <script>setTimeout(() => document.getElementById('toast-error')?.remove(), 7000);</script>
+        <?php endif; ?>
+
         <script>
             function toggleNotifications() {
                 const dropdown = document.getElementById('notif-dropdown');
@@ -171,6 +183,21 @@
                 const dropdown = document.getElementById('notif-dropdown');
                 if (center && dropdown && !center.contains(e.target)) {
                     dropdown.classList.add('hidden');
+                }
+            });
+
+            // Mobile menu toggle
+            document.addEventListener('DOMContentLoaded', () => {
+                const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+                const sidebar = document.querySelector('aside');
+                
+                if (mobileMenuToggle && sidebar) {
+                    mobileMenuToggle.addEventListener('click', () => {
+                        sidebar.classList.toggle('hidden');
+                        sidebar.classList.toggle('absolute');
+                        sidebar.classList.toggle('h-full');
+                        sidebar.classList.toggle('z-40');
+                    });
                 }
             });
 

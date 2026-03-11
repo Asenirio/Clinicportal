@@ -50,7 +50,7 @@ require_once 'sidebar.php';
                     TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) AS age
                 FROM patients p
                 JOIN users u ON p.user_id = u.id
-                ORDER BY p.created_at DESC
+                ORDER BY u.created_at DESC
             ";
             $stmt = $pdo->query($query);
             $patients = $stmt->fetchAll();

@@ -52,11 +52,15 @@ function log_activity($action, $module, $details = null)
  */
 function require_role($role)
 {
+    // Temporarily bypassed role checks as requested by the user, 
+    // so any logged-in user can access any page without getting "Access denied"
+    /*
     if (!isset($_SESSION['role']) || $_SESSION['role'] !== $role) {
         $_SESSION['error_msg'] = "Access denied. You do not have the required permissions.";
         header("Location: dashboard.php");
         exit;
     }
+    */
 }
 
 // Automatically check auth for any page that includes this file (except public pages)
